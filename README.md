@@ -1,0 +1,82 @@
+# Connections Data Dump
+
+This project fetches NYT Connections puzzle data and generates basic normalised JSONL files for downstream use by my [heatmaps](https://github.com/CSymes/connections-heatmaps) visualiser.
+
+This is specifically formatted for my needs, and may include or omit fields useful for other purposes.
+
+## What this application does
+
+The pipeline has two stages:
+
+1. Scrape raw puzzle JSONs from the NYT Connections API by date
+2. Build normalised JSONL outputs from the raw files
+
+A separate script exists for each step, but `main.py` runs both stages in sequence.
+
+## How to run it
+
+### Prerequisites
+
+- Python 3 (I used 3.14)
+- Dependencies from `requirements.txt`
+
+```bash
+python -m pip install -r requirements.txt
+```
+
+### Run full dump/format
+
+```bash
+python main.py
+```
+
+Flags for `main.py`:
+
+- `--start YYYY-MM-DD`: scrape start date (inclusive). Defaults to the first date Connections ran (2023-06-12)
+- `--end YYYY-MM-DD`: scrape end date (inclusive). Defaults to today (even though several days' worth of puzzles are technically available ahead of time, we do not grab these in case of changes. Also because I didn't want spoilers.)
+- `--raw-dir PATH`: raw JSON directory used by the build step
+- `--data-dir PATH`: output directory for generated JSONL files
+
+Example:
+
+```bash
+python main.py --start 2024-01-01 --end 2024-12-31
+```
+
+### Run stages independently
+
+Scrape only:
+
+```bash
+python scrape_raw_data.py --start 2023-06-12 --end 2026-04-09
+```
+
+Build JSONL only:
+
+```bash
+python build_jsonl.py --raw-dir .raw_json --data-dir data
+```
+
+## How data is stored
+
+### Raw source data
+
+`scrape_raw_data.py` grabs the raw API response for all targetted puzzle dates and dumps the raw response into `.raw_json/<yyyy-mm-dd>json`
+
+It skips pre-existing dates as they have already been fetched, and are not going to be retroactively updated once published.
+
+### Processed data
+
+`build_jsonl.py` then takse the raw source data and converts it into a handful of JSONL files (i.e. one line per day).  
+- `data/all_puzzles.jsonl` (contains all puzzles)
+- `data/<year>.jsonl` (yearly split, e.g. `data/2026.jsonl`)
+
+Each normalised puzzle row contains:
+
+- `date`
+- `categories[]`
+  - `title`
+  - `cards[]`
+    - `content`
+    - `x`, `y` (grid coordinates derived from card position)
+    - `type: "image"` iff source card is image-based, absent otherwise
