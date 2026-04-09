@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import sys
 from collections import defaultdict
 from pathlib import Path
 from typing import Any
@@ -62,15 +61,7 @@ def write_jsonl(path: Path, rows: list[dict[str, Any]]) -> None:
     path.write_text(content, encoding="utf-8")
 
 
-def main() -> int:
-    parser = argparse.ArgumentParser(description="Build normalised Connections JSONL files")
-    parser.add_argument("--raw-dir", type=Path, default=DEFAULT_RAW_DIR)
-    parser.add_argument("--data-dir", type=Path, default=DEFAULT_DATA_DIR)
-    args = parser.parse_args()
-
-    raw_dir = args.raw_dir
-    data_dir = args.data_dir
-
+def build_jsonl(raw_dir: Path = DEFAULT_RAW_DIR, data_dir: Path = DEFAULT_DATA_DIR) -> tuple[int, int]:
     if not raw_dir.exists():
         raise FileNotFoundError(f"raw dir not found: {raw_dir}")
 
@@ -87,11 +78,21 @@ def main() -> int:
     for year, rows in sorted(by_year.items()):
         write_jsonl(data_dir / f"{year}.jsonl", rows)
 
-    print(f"Wrote {len(puzzles)} puzzles to {data_dir / 'all_puzzles.jsonl'}")
-    print(f"Wrote {len(by_year)} yearly files to {data_dir}")
+    return len(puzzles), len(by_year)
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description="Build normalised Connections JSONL files")
+    parser.add_argument("--raw-dir", type=Path, default=DEFAULT_RAW_DIR)
+    parser.add_argument("--data-dir", type=Path, default=DEFAULT_DATA_DIR)
+    args = parser.parse_args(argv)
+
+    puzzle_count, year_count = build_jsonl(args.raw_dir, args.data_dir)
+
+    print(f"Wrote {puzzle_count} puzzles to {args.data_dir / 'all_puzzles.jsonl'}")
+    print(f"Wrote {year_count} yearly files to {args.data_dir}")
     return 0
 
 
 if __name__ == "__main__":
-    result = main()
-    sys.exit(result)
+    raise SystemExit(main())

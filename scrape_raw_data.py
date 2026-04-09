@@ -14,7 +14,7 @@ import requests
 DEFAULT_START_DATE = date(2023, 6, 12)
 DEFAULT_END_DATE = date.today()
 URL_TEMPLATE = "https://www.nytimes.com/svc/connections/v2/{}.json"
-OUT_DIR = Path(__file__).parent / ".raw_json"
+DEFAULT_OUT_DIR = Path(__file__).parent / ".raw_json"
 RATE_LIMIT_PER_SEC = 5
 MAX_WORKERS = 5
 USER_AGENT = "connections-data-scraper (github.com/CSymes/connections-data)"
@@ -69,29 +69,18 @@ def parse_date(s: str) -> date:
         raise argparse.ArgumentTypeError(f"invalid date {s!r}, expected YYYY-MM-DD") from e
 
 
-def main() -> int:
-    parser = argparse.ArgumentParser(description="Scrape NYT Connections puzzles.")
-    parser.add_argument(
-        "--start", type=parse_date, default=DEFAULT_START_DATE,
-        help=f"start date YYYY-MM-DD (default: {DEFAULT_START_DATE})",
-    )
-    parser.add_argument(
-        "--end", type=parse_date, default=DEFAULT_END_DATE,
-        help=f"end date YYYY-MM-DD inclusive (default: today)",
-    )
-    args = parser.parse_args()
+def scrape_raw_data(start: date, end: date, out_dir: Path = DEFAULT_OUT_DIR) -> int:
+    if start > end:
+        raise ValueError(f"start ({start}) must be <= end ({end})")
 
-    if args.start > args.end:
-        parser.error(f"start ({args.start}) must be <= end ({args.end})")
-
-    OUT_DIR.mkdir(exist_ok=True)
-    all_dates = list(daterange(args.start, args.end))
+    out_dir.mkdir(exist_ok=True)
+    all_dates = list(daterange(start, end))
     total = len(all_dates)
 
     todo: list[tuple[date, Path]] = []
     skipped = 0
     for d in all_dates:
-        out_path = OUT_DIR / f"{d.isoformat()}.json"
+        out_path = out_dir / f"{d.isoformat()}.json"
         if out_path.exists():
             skipped += 1
         else:
@@ -106,7 +95,7 @@ def main() -> int:
     limiter = RateLimiter(RATE_LIMIT_PER_SEC)
 
     fetched = failed = 0
-    start = time.monotonic()
+    start_time = time.monotonic()
     interrupted = False
 
     pool = ThreadPoolExecutor(max_workers=MAX_WORKERS)
@@ -123,7 +112,7 @@ def main() -> int:
                     failed += 1
                     print(f"  {d}: {status}", file=sys.stderr)
                 if i % 25 == 0 or i == len(futures):
-                    elapsed = time.monotonic() - start
+                    elapsed = time.monotonic() - start_time
                     rate = i / elapsed if elapsed > 0 else 0
                     print(f"[{i}/{len(futures)}] {rate:.1f} req/s")
         except KeyboardInterrupt:
@@ -134,11 +123,34 @@ def main() -> int:
     finally:
         pool.shutdown(wait=True, cancel_futures=True)
 
-    print(f"\nDone. fetched={fetched} skipped={skipped} failed={failed}"
-          + (" (interrupted)" if interrupted else ""))
+    print(
+        f"\nDone. fetched={fetched} skipped={skipped} failed={failed}"
+        + (" (interrupted)" if interrupted else "")
+    )
     return 130 if interrupted else 0
 
 
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description="Scrape NYT Connections puzzles.")
+    parser.add_argument(
+        "--start",
+        type=parse_date,
+        default=DEFAULT_START_DATE,
+        help=f"start date YYYY-MM-DD (default: {DEFAULT_START_DATE})",
+    )
+    parser.add_argument(
+        "--end",
+        type=parse_date,
+        default=DEFAULT_END_DATE,
+        help=f"end date YYYY-MM-DD inclusive (default: today)",
+    )
+    args = parser.parse_args(argv)
+
+    if args.start > args.end:
+        parser.error(f"start ({args.start}) must be <= end ({args.end})")
+
+    return scrape_raw_data(args.start, args.end, DEFAULT_OUT_DIR)
+
+
 if __name__ == "__main__":
-    result = main()
-    sys.exit(result)
+    raise SystemExit(main())
