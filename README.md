@@ -80,3 +80,47 @@ Each normalised puzzle row contains:
     - `content`
     - `x`, `y` (grid coordinates derived from card position)
     - `type: "image"` iff source card is image-based, absent otherwise
+
+
+## Missing Puzzles
+
+There are at least 79 puzzles that are 'missing', based on the detectable dataset presented here.
+
+These are:
+ - 207
+ - 211
+ - 232
+ - 237
+ - 246
+ - 306
+ - 315
+ - 322
+ - 331
+ - 336–339
+ - 342–346
+ - 351
+ - 384–385
+ - 424
+ - 454
+ - 463–466
+ - 490
+ - 597
+ - 622
+ - 637
+ - 657
+ - 721–724
+ - 729
+ - 732
+ - 798
+ - 931–932
+ - 940
+ - 955
+ - 963
+ - 978–987
+ - 1013
+ - 1041–1063
+ - 1091
+
+Presumably these are some sort of secret puzzles not accessed via a specific date, or drafts that never made it to publication.
+
+Some puzzles (e.g. IDs 1027-1029, 1090) were created significantly out of order compared to their publication date. This happens frequently enough (about one third of puzzles are 'out of order') not to comment, other than that some of them were clearly scheduled for a specific day, or planned ahead. E.G. #1027 doesn't seem date-related, but does include a meta-reference to Connections itself.
